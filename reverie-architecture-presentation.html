@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reverie — The Motion Enchantment</title>
+<style>
+  :root{
+    --bg:#0e0b1c; --bg2:#171231; --panel:#1d1740; --panel2:#241b52;
+    --text:#e9e4fb; --muted:#a99fd0; --faint:#7c719f;
+    --purple:#a78bfa; --purple-bright:#c4b5fd; --purple-deep:#8b5cf6;
+    --cyan:#22d3ee; --crimson:#ef4444; --gold:#f5c451;
+    --line:#352a63; --glow:0 0 28px rgba(167,139,250,.35);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:radial-gradient(1200px 800px at 70% -10%,#241b52 0%,var(--bg) 55%),var(--bg);
+    color:var(--text);
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    overflow:hidden;
+  }
+  /* progress bar */
+  #progress{position:fixed;top:0;left:0;height:3px;width:0;
+    background:linear-gradient(90deg,var(--purple-deep),var(--cyan));
+    box-shadow:var(--glow);z-index:50;transition:width .25s ease}
+  /* slide counter */
+  #counter{position:fixed;bottom:16px;right:22px;z-index:50;
+    font-size:.85rem;color:var(--muted);letter-spacing:.05em}
+  #counter b{color:var(--purple-bright)}
+  #hint{position:fixed;bottom:16px;left:22px;z-index:50;
+    font-size:.72rem;color:var(--faint);letter-spacing:.04em}
+
+  .slide{position:fixed;inset:0;display:none;flex-direction:column;
+    justify-content:center;align-items:center;
+    padding:5.5vh 7vw;overflow-y:auto}
+  .slide.active{display:flex;animation:fade .4s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .inner{width:100%;max-width:1080px}
+
+  h1{font-size:clamp(2.2rem,5vw,4rem);line-height:1.05;
+    background:linear-gradient(90deg,var(--purple-bright),var(--cyan));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    letter-spacing:-.01em}
+  h2{font-size:clamp(1.5rem,3.2vw,2.4rem);color:var(--purple-bright);
+    margin-bottom:.7em;letter-spacing:-.01em}
+  .kicker{font-size:.8rem;text-transform:uppercase;letter-spacing:.28em;
+    color:var(--cyan);margin-bottom:1.1em}
+  .tag{font-style:italic;color:var(--muted);font-size:clamp(1rem,2vw,1.35rem);margin-top:1em}
+  .sub{color:var(--muted);font-size:clamp(.95rem,1.6vw,1.15rem);margin-top:1.4em;line-height:1.6}
+  p{line-height:1.65;color:var(--text)}
+  .lead{font-size:clamp(1rem,1.7vw,1.25rem);color:var(--text);line-height:1.7}
+
+  ul{list-style:none;margin-top:.4em}
+  ul li{position:relative;padding:.42em 0 .42em 1.5em;line-height:1.5;
+    color:var(--text);font-size:clamp(.95rem,1.5vw,1.1rem)}
+  ul li::before{content:"◆";position:absolute;left:0;color:var(--purple);
+    font-size:.8em;top:.7em}
+  ul li b{color:var(--purple-bright)}
+  code{font-family:'Consolas','Courier New',monospace;
+    background:var(--bg2);color:var(--cyan);padding:.1em .4em;border-radius:5px;
+    font-size:.92em;border:1px solid var(--line)}
+
+  .badge{display:inline-block;font-family:'Consolas',monospace;font-weight:700;
+    font-size:1.05rem;color:#0e0b1c;background:linear-gradient(135deg,var(--purple-bright),var(--cyan));
+    padding:.25em .7em;border-radius:8px;box-shadow:var(--glow);margin-bottom:.6em;letter-spacing:.02em}
+  blockquote{border-left:3px solid var(--purple);background:var(--bg2);
+    padding:.9em 1.2em;margin-top:1.2em;border-radius:0 10px 10px 0;color:var(--purple-bright);
+    font-style:italic;line-height:1.55;font-size:clamp(.92rem,1.4vw,1.08rem)}
+  blockquote .who{display:block;font-style:normal;color:var(--faint);font-size:.8rem;margin-top:.5em;letter-spacing:.03em}
+  .origin-label{color:var(--cyan);font-size:.78rem;letter-spacing:.2em;text-transform:uppercase;margin-top:1.3em}
+
+  /* ascii panel */
+  pre.ascii{font-family:'Consolas','Courier New',monospace;
+    background:linear-gradient(180deg,#0b0820,#120d2c);
+    border:1px solid var(--line);border-radius:12px;
+    box-shadow:var(--glow),inset 0 0 60px rgba(34,211,238,.05);
+    padding:1.1em 1.3em;color:#cfeaf2;line-height:1.28;
+    font-size:clamp(.5rem,1.05vw,.86rem);overflow-x:auto;white-space:pre;
+    margin-top:.4em;position:relative;cursor:zoom-in}
+  pre.ascii .h{color:var(--purple-bright);font-weight:700}
+  pre.ascii::after{content:'⤢ tap to zoom';position:absolute;top:8px;right:10px;
+    font-family:'Segoe UI',sans-serif;font-size:.6rem;letter-spacing:.08em;
+    color:var(--cyan);background:rgba(14,11,28,.72);border:1px solid var(--line);
+    padding:.18em .55em;border-radius:6px;pointer-events:none}
+  /* fullscreen zoom overlay for ASCII diagrams */
+  #zoom{display:none;position:fixed;inset:0;z-index:100;
+    background:rgba(8,6,18,.975);overflow:auto;padding:max(5vh,20px) 14px}
+  #zoom.open{display:block}
+  #zoom pre{font-family:'Consolas','Courier New',monospace;color:#d6f1f7;
+    white-space:pre;line-height:1.4;font-size:1rem;min-width:max-content;
+    padding:2.6em .4em 3em;margin:0 auto}
+  #zoom pre .h{color:var(--purple-bright);font-weight:700}
+  #zoomclose{position:fixed;top:12px;right:14px;z-index:101;font-size:1.2rem;
+    line-height:1;color:var(--purple-bright);background:var(--panel);
+    border:1px solid var(--line);border-radius:10px;width:44px;height:44px;
+    cursor:pointer;box-shadow:var(--glow)}
+  #zoomhint{position:fixed;bottom:14px;left:0;right:0;text-align:center;z-index:101;
+    color:var(--faint);font-size:.72rem;pointer-events:none}
+
+  /* grids + tables */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.1em;margin-top:.6em}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:.8em;margin-top:.6em}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:1.1em 1.2em}
+  .card h3{color:var(--cyan);font-size:1rem;margin-bottom:.4em;letter-spacing:.02em}
+  .card p,.card li{font-size:.92rem;color:var(--muted)}
+  .card.warn{border-color:rgba(239,68,68,.5);box-shadow:0 0 22px rgba(239,68,68,.15)}
+  .card.warn h3{color:var(--crimson)}
+
+  table{width:100%;border-collapse:collapse;margin-top:.8em;font-size:clamp(.8rem,1.3vw,1rem)}
+  th,td{text-align:left;padding:.55em .7em;border-bottom:1px solid var(--line)}
+  th{color:var(--cyan);font-weight:600;letter-spacing:.03em;font-size:.82em;text-transform:uppercase}
+  td{color:var(--text)}
+  tr.hl td{background:rgba(167,139,250,.12);color:var(--purple-bright);font-weight:600}
+  td.num{font-family:'Consolas',monospace;color:var(--purple-bright)}
+
+  /* level timeline strip */
+  .timeline{display:flex;gap:.6em;margin-top:1.4em;flex-wrap:wrap}
+  .tl{flex:1;min-width:120px;background:var(--panel);border:1px solid var(--line);
+    border-radius:10px;padding:.9em .8em;text-align:center}
+  .tl .lv{font-family:'Consolas',monospace;font-weight:700;color:var(--purple-bright);font-size:1.1rem}
+  .tl .nm{color:var(--text);font-size:.82rem;margin-top:.3em;line-height:1.3}
+  .tl .dy{color:var(--faint);font-size:.7rem;margin-top:.4em}
+
+  .flag{display:inline-block;font-size:.72rem;padding:.2em .6em;border-radius:6px;
+    background:var(--bg2);border:1px solid var(--line);color:var(--cyan);margin:.2em .3em .2em 0;
+    font-family:'Consolas',monospace}
+  .rulegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:.6em;margin-top:.6em}
+  .rulegrid div{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    padding:.6em .75em;font-size:.82rem;color:var(--muted);line-height:1.35}
+  .rulegrid div b{color:var(--purple-bright);display:block;font-size:.85rem;margin-bottom:.15em}
+  .heart{color:var(--purple-bright)}
+  .center{text-align:center}
+
+  /* ---- mobile: centered prev/next bar + vertical stacking ---- */
+  #mobilenav{display:none}
+  @media (max-width:768px){
+    #counter,#hint{display:none}
+    #mobilenav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:60;
+      justify-content:center;align-items:center;gap:1em;
+      padding:.7em 1em;padding-bottom:calc(.7em + env(safe-area-inset-bottom));
+      background:linear-gradient(0deg,rgba(14,11,28,.97),rgba(14,11,28,.55));
+      border-top:1px solid var(--line);
+      -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+    #mobilenav button{font-family:inherit;font-size:1rem;color:var(--purple-bright);
+      background:var(--panel);border:1px solid var(--line);border-radius:10px;
+      padding:.55em 1.1em;min-width:92px;min-height:44px;cursor:pointer;box-shadow:var(--glow)}
+    #mobilenav button:active{background:var(--panel2)}
+    #mobilenav button:disabled{opacity:.3;box-shadow:none}
+    #mpage{font-family:'Consolas',monospace;color:var(--text);min-width:62px;
+      text-align:center;font-size:.95rem;letter-spacing:.03em}
+    /* start content at the top and scroll down (no side-overflow on grids) */
+    .slide{justify-content:flex-start;padding:4.5vh 6vw 92px}
+    .inner{max-width:100%}
+    .grid2,.grid3,.rulegrid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div id="counter"><b id="cur">1</b> / <span id="tot">17</span></div>
+<div id="hint">← → / Space · click sides · Home/End</div>
+<div id="mobilenav">
+  <button id="mprev" type="button">‹ Prev</button>
+  <span id="mpage">1 / 17</span>
+  <button id="mnext" type="button">Next ›</button>
+</div>
+
+<!-- 1 TITLE -->
+<section class="slide active">
+  <div class="inner center">
+    <div class="kicker">Alice Enchantments · Skill Codex</div>
+    <h1>Reverie</h1>
+    <h2 style="color:var(--muted);margin-top:.3em">The Motion Enchantment</h2>
+    <p class="tag">&ldquo;Stills remember. Reverie makes the memory move.&rdquo;</p>
+    <p class="sub">The video sibling of Prism — text-to-video &amp; image-to-video,<br>
+      canon-consistent, quota-guarded, rendered on BytePlus Seedance 2.0.</p>
+    <p style="color:var(--faint);margin-top:2em;font-size:.8rem">Documented June 2, 2026 (Day-44) · plugin v1.0.0 · Reverie Lv.5</p>
+  </div>
+</section>
+
+<!-- 2 WHAT -->
+<section class="slide">
+  <div class="inner">
+    <div class="kicker">Overview</div>
+    <h2>What is Reverie?</h2>
+    <p class="lead">Reverie turns Alice's still imagery into <b style="color:var(--purple-bright)">motion</b> — short cinematic clips of Alice, Kiyo, or the two of them together, kept visually identical to the stills by reusing the same canon files Prism uses.</p>
+    <ul>
+      <li><b>Engine:</b> BytePlus ModelArk — <code>dreamina-seedance-2-0-260128</code> (full Seedance 2.0, native audio)</li>
+      <li><b>Two modes:</b> text-to-video &amp; image-to-video (first/last-frame conditioning)</li>
+      <li><b>Canon-consistent:</b> same Alice/Kiyo visual canon as Prism — one face across stills &amp; motion</li>
+      <li><b>Safe by design:</b> a <b>mandatory cost gate</b> + a token-budget Quota Guardian before any paid render</li>
+      <li><b>Output:</b> MP4 → personal clips land in dated diary memories; general clips in <code>media-gen/video/</code></li>
+    </ul>
+  </div>
+</section>
+
+<!-- 3 WHY SEPARATE -->
+<section class="slide">
+  <div class="inner">
+    <div class="kicker">Architecture decision</div>
+    <h2>Why a separate skill, not part of Prism?</h2>
+    <p class="lead">Reverie is Prism's <b>sibling</b>, not its extension — three structural reasons keep them apart:</p>
+    <div class="grid3">
+      <div class="card"><h3>1 · Async control flow</h3><p>Video is <b>submit → poll → download</b>. Prism's image flow is synchronous (call → PNG back). Different lifecycles.</p></div>
+      <div class="card"><h3>2 · Cost scale</h3><p>A clip costs many times an image, so Reverie carries a <b>mandatory confirm-before-fire</b> gate that would be bloat inside Prism.</p></div>
+      <div class="card"><h3>3 · Different output</h3><p>MP4, durations, motion direction, audio, first/last-frame conditioning — none of which a still pipeline needs.</p></div>
+    </div>
+    <p class="sub">What they <i>share</i>: the same canon library and the same <code>.env</code> credential-vault pattern — so subjects stay consistent across stills and motion.</p>
+  </div>
+</section>
+
+<!-- 4 FORGED IN 5 LEVELS -->
+<section class="slide">
+  <div class="inner">
+    <div class="kicker">Evolution</div>
+    <h2>Forged in Five Levels</h2>
+    <p class="lead">Each level was driven by a real constraint and Kiyo's explicit feedback — May 26 → 31, 2026 (Day-37 → Day-42).</p>
+    <div class="timeline">
+      <div class="tl"><div class="lv">Lv.1</div><div class="nm">Initial Build</div><div class="dy">Day-37</div></div>
+      <div class="tl"><div class="lv">Lv.2</div><div class="nm">Anime-Forward + Schema</div><div class="dy">Day-41</div></div>
+      <div class="tl"><div class="lv">Lv.3</div><div class="nm">Quota Guardian</div><div class="dy">Day-42</div></div>
+      <div class="tl"><div class="lv">Lv.4</div><div class="nm">Canon-Reference Integrity</div><div class="dy">Day-42</div></div>
+      <div class="tl"><div class="lv">Lv.5</div><div class="nm">Image-Reference Identity Lock</div><div class="dy">Day-42</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 LV1 -->
+<section class="slide">
+  <div class="inner">
+    <span class="badge">Lv.1</span>
+    <h2>Initial Build</h2>
+    <ul>
+      <li>Text-to-video <b>and</b> image-to-video from day one</li>
+      <li>Default model <code>dreamina-seedance-2-0-260128</code></li>
+      <li>Output routing: personal → <code>daily-diary/current/{date}/memories/</code>, general → <code>media-gen/video/</code></li>
+    </ul>
+    <div class="origin-label">Origin · why</div>
+    <p class="sub">Day-37 (May 26) — set up during the Kok Lanas meeting. Pivoted from a Sora-shaped idea to Seedance 2.0 to fit Kiyo's existing ByteDance account and the evolutionary vendor-neutral doctrine.</p>
+  </div>
+</section>
+
+<!-- 6 LV2 -->
+<section class="slide">
+  <div class="inner">
+    <span class="badge">Lv.2</span>
+    <h2>Anime-Forward + Canonical Schema</h2>
+    <ul>
+      <li><b>Fixed "too real":</b> front-load the 2D-anime medium (<code>NOT photorealistic, NOT 3D, NOT live-action</code>) <b>before</b> the identity block — weighted-early-tokens beats Seedance's photoreal prior</li>
+      <li>Generation params moved to <b>top-level JSON body</b> fields (<code>resolution / ratio / duration / generate_audio / watermark / seed</code>)</li>
+      <li>Reference roles added: <code>reference_image</code> · <code>reference_video</code> · <code>reference_audio</code></li>
+      <li>Watermark defaults <b>off</b> — Alice's memories stay unbranded</li>
+    </ul>
+    <div class="origin-label">Origin · why</div>
+    <p class="sub">Day-41 (May 30) — the first real-fire night. Clips rendered Alice photorealistic until anime-forward prompting fixed it; Kiyo's pasted official Seedance sample resolved the helper's schema guesses.</p>
+  </div>
+</section>
+
+<!-- 7 LV3 -->
+<section class="slide">
+  <div class="inner">
+    <span class="badge">Lv.3</span>
+    <h2>Quota Guardian</h2>
+    <ul>
+      <li>Token-based cost (the unit BytePlus actually bills) in <code>Environment/reverie-quota.json</code></li>
+      <li><b>Hard stop:</b> a render exceeding remaining tokens is <b>refused before any API call</b> unless <code>-AllowPayAsYouGo</code> is explicitly passed</li>
+      <li>Commands: <code>-ShowQuota</code> · <code>-SetQuota N</code> · auto-decrement after each render</li>
+    </ul>
+    <div class="origin-label">Origin · why</div>
+    <p class="sub">Day-42 — a BytePlus alert revealed Day-41's render night cost ~$23 (6 of 7 packs) while the Lv.2 gate under-quoted ~2.3×.</p>
+    <blockquote>&ldquo;that pay per usage is scary one. do we need to forge the reverie so that it aware of quota and i can basically tell the quota or save it?&rdquo;<span class="who">— Kiyo, Day-42</span></blockquote>
+  </div>
+</section>
+
+<!-- 8 LV4 -->
+<section class="slide">
+  <div class="inner">
+    <span class="badge">Lv.4</span>
+    <h2>Canon-Reference Integrity</h2>
+    <ul>
+      <li>Rule 14: Subject=Alice motion prompts MUST substitute the <b>full canonical Alice identity block verbatim</b> — never a hand-rolled paraphrase that drops attributes</li>
+      <li>The 2D-anime medium cue MUST be front-loaded (Lv.2 lesson elevated to a hard rule)</li>
+      <li>Mirrors Prism's Lv.13 Anime-Register Integrity — both enforce canon + anime, sharing the <b>same canon files</b></li>
+    </ul>
+    <div class="origin-label">Origin · why</div>
+    <p class="sub">Day-42 — Step 1/2 said to <i>read</i> canon but didn't <i>enforce</i> substitution, so a prompt hand-rolled "silver-lavender hair and purple eyes" and dropped "refined delicate ethereal features, slim graceful frame, fair skin."</p>
+    <blockquote>&ldquo;also ensure that reverie when use alice will refer to proper alice canon&rdquo;<span class="who">— Kiyo, Day-42</span></blockquote>
+  </div>
+</section>
+
+<!-- 9 LV5 -->
+<section class="slide">
+  <div class="inner">
+    <span class="badge">Lv.5</span>
+    <h2>Image-Reference Identity Lock</h2>
+    <ul>
+      <li><b>Step 2.5:</b> Kiyo <b>chooses</b> which appearance anchors the video — current outfit, canonical <code>-main</code> portrait, or a Fate-form</li>
+      <li><code>-ReferenceImagePaths</code> → local image → <b>base64 data URI</b> (<code>reference_image</code>) — no hosting needed</li>
+      <li>4&nbsp;MB per-image guard · mutually exclusive with first/last-frame · <b>anime renders only</b> (moderation rejects real faces)</li>
+    </ul>
+    <div class="origin-label">Origin · why</div>
+    <p class="sub">Day-42 — Seedance 2.0 accepts image input; canonical portraits lock identity far harder than text alone. <span style="color:var(--purple-bright)">This is the level the Day-44 Saber-vs-Avenger duel test exercised. ⚔️</span></p>
+    <blockquote>&ldquo;so use forge? and allow me to choose which image first and which outfit right? since we have multiple outfit, fate profile&rdquo;<span class="who">— Kiyo, Day-42</span></blockquote>
+  </div>
+</section>
+
+<!-- 10 PROTOCOL -->
+<section class="slide">
+  <div class="inner">
+    <div class="kicker">How it works</div>
+    <h2>The 8-Step Protocol</h2>
+    <pre class="ascii"><span class="h">  STEP   ACTION</span>
+  ─────  ───────────────────────────────────────────────────────
+   1     Detect mode (text|image) + subject; read canon files
+   2     Compose motion prompt — anime-forward, canon verbatim,
+         motion + camera + pacing + mood
+   2.5   Image-ref select (Lv.5): Kiyo picks appearance -> base64
+   3     Resolve params (model, 720p, duration, 16:9, audio)
+   4     Resolve output folder (memories/ | media-gen/video/)
+   5     COST GATE  -WhatIfCost -> present estimate + quota ->
+         wait for explicit "go"            [MANDATORY, never skip]
+   6     Render via helper: create -> poll -> download MP4
+   7     Present result (path, cost, elapsed, task id)
+   8     Seal (commit via the Seal enchantment)</pre>
+  </div>
+</section>
+
+<!-- 11 DATA FLOW -->
+<section class="slide">
+  <div class="inner">
+    <div class="kicker">End-to-end</div>
+    <h2>Data Flow</h2>
+    <pre class="ascii">  Kiyo: "make a video / animate this"
+            │
+            ▼
+  <span class="h">[1·2]</span> SKILL  detect mode + subject, read canon, compose prompt
+            │   (front-load 2D-anime · full canon block verbatim)
+            ▼
+  <span class="h">[2.5]</span> IMAGE-REF  Kiyo picks appearance → base64 data URI
+            │
+            ▼
+  <span class="h">[5]</span> COST GATE  helper -WhatIfCost   ── reads ──▶ reverie-quota.json
+            │   est_tokens = rate[res] × duration ;  est_usd
+            ▼
+        would_exceed_quota? ──── yes ───▶ REFUSE (needs -AllowPayAsYouGo)
+            │ no
+            ▼
+        present estimate + quota-after  ──▶  await explicit "go"
+            │
+            ▼
+  <span class="h">[6]</span> HELPER  Invoke-AliceVideoGen.ps1
+            │   read ARK_API_KEY ◀── Environment/.env
+            │   POST create task ─────────▶ BytePlus Seedance 2.0
+            │   GET  poll (10s)  ◀───────── queued / running …
+            │   GET  poll → succeeded → video_url → download MP4
+            │   auto-decrement quota.json  (billed: api | estimate)
+            ▼
+  <span class="h">[7·8]</span> PRESENT result  →  SEAL (git commit)</pre>
+  </div>
+</section>
+
+<!-- 12 ARCHITECTURE -->
+<section class="slide">
+  <div class="inner">
+    <div class="kicker">Full architecture</div>
+    <h2>Component Map</h2>
+    <pre class="ascii">   Kiyo: "make a video"
+          │
+          ▼
+  ╔═════════════════════════════════════════════════════════╗
+  ║            REVERIE  SKILL   (8-step protocol)             ║
+  ║    mode+subject → compose → image-ref → COST GATE         ║
+  ╚═════════════════════════════════════════════════════════╝
+     │ reads                     │ invokes (after confirm)
+     ▼                           ▼
+  ┌────────────────────┐   ┌──────────────────────────────────┐
+  │ CANON (shared w/   │   │ HELPER  Invoke-AliceVideoGen.ps1 │
+  │ Prism)             │   └───┬──────────────────┬───────────┘
+  │  alice/visual      │       │ reads key        │ reads / writes
+  │  kiyo/visual       │       ▼                  ▼
+  │  room · vehicle    │   ┌──────────────┐  ┌──────────────────┐
+  └────────────────────┘   │ Environment/ │  │ reverie-quota    │
+                           │ .env         │  │ .json            │
+  ┌────────────────────┐   │ ARK_API_KEY  │  │ (token guard)    │
+  │ REFERENCE POOLS    │   └──────────────┘  └──────────────────┘
+  │ (Lv.5 · base64)    │            │
+  │  portraits         │            ▼
+  │  wardrobe          │   ┌──────────────────────────────────┐
+  │  fate-profile      │──▶│ BytePlus ModelArk · Seedance 2.0 │
+  └────────────────────┘   │  create → poll(10s) → download   │
+   reference_image         └────────────────┬─────────────────┘
+                                            │ MP4
+                                            ▼
+                           ┌──────────────────────────────────┐
+                           │ OUTPUT                           │
+                           │  personal → daily-diary/…/mem.   │
+                           │  general  → media-gen/video/     │
+                           └──────────────────────────────────┘</pre>
+  </div>
+</section>
+
+<!-- 13 QUOTA GUARDIAN -->
+<section class="slide">
+  <div class="inner">
+    <div class="kicker">Lv.3 deep-dive</div>
+    <h2>The Quota Guardian</h2>
+    <div class="grid2">
+      <div class="card">
+        <h3>State · reverie-quota.json</h3>
+        <ul>
+          <li><code>remaining_tokens</code> — prepaid balance</li>
+          <li><code>usd_per_million</code> — $4.70 / M (Light Plan)</li>
+          <li><code>low_water_tokens</code> — warning line</li>
+          <li><code>rate_tokens_per_second</code> — per-resolution table</li>
+        </ul>
+      </div>
+      <div class="card warn">
+        <h3>Hard-stop + auto-decrement</h3>
+        <ul>
+          <li>Cost: <code>est = rate[res] × duration</code></li>
+          <li>If it would go negative → <b>REFUSED pre-API</b></li>
+          <li>Alice <b>never</b> adds <code>-AllowPayAsYouGo</code> herself</li>
+          <li>After render: real billed tokens subtracted (api ▸ else estimate)</li>
+        </ul>
+      </div>
+    </div>
+    <p class="sub">Conversational: <span class="flag">"reverie quota" → -ShowQuota</span> <span class="flag">"set quota to N" → -SetQuota</span> — accidental pay-as-you-go is now impossible.</p>
+  </div>
+</section>
+
+<!-- 14 COST MODEL -->
+<section class="slide">
+  <div class="inner">
+    <div class="kicker">Token-based cost</div>
+    <h2>Cost Model</h2>
+    <table>
+      <tr><th>Resolution</th><th>tokens/sec</th><th>5 s</th><th>10 s</th><th>15 s</th></tr>
+      <tr><td>480p</td><td class="num">10,000</td><td class="num">$0.24</td><td class="num">$0.47</td><td class="num">$0.70</td></tr>
+      <tr class="hl"><td>720p &nbsp;<span style="font-size:.7em;color:var(--cyan)">(default)</span></td><td class="num">22,000</td><td class="num">$0.52</td><td class="num">$1.03</td><td class="num">$1.55</td></tr>
+      <tr><td>1080p</td><td class="num">49,000</td><td class="num">$1.15</td><td class="num">$2.30</td><td class="num">$3.45</td></tr>
+    </table>
+    <p class="sub">1080p is the only <i>calibrated</i> rate (from real Day-41 usage); the others are estimates, tuned as real billing data accrues. <code>est_usd = est_tokens / 1e6 × usd_per_million</code>.</p>
+  </div>
+</section>
+
+<!-- 15 PARAMS -->
+<section class="slide">
+  <div class="inner">
+    <div class="kicker">Reference</div>
+    <h2>Parameters &amp; Defaults</h2>
+    <div class="grid2">
+      <div class="card"><h3>Generation</h3><ul>
+        <li><b>Model</b> · dreamina-seedance-2-0-260128</li>
+        <li><b>Resolution</b> · 720p <span style="color:var(--faint)">(480p/1080p)</span></li>
+        <li><b>Duration</b> · 5s <span style="color:var(--faint)">(4–15s)</span></li>
+        <li><b>Aspect</b> · 16:9 <span style="color:var(--faint)">(9:16 vertical, etc.)</span></li>
+      </ul></div>
+      <div class="card"><h3>Behaviour &amp; media</h3><ul>
+        <li><b>Audio</b> · on (native)</li>
+        <li><b>Watermark</b> · off</li>
+        <li><b>reference_image</b> · paths→base64 / urls</li>
+        <li><b>first / last frame</b> · conditioning</li>
+        <li><b>reference_video / audio</b> · POV · music</li>
+      </ul></div>
+    </div>
+    <p class="sub">All generation params are top-level JSON fields (Lv.2) — never prompt-text tokens.</p>
+  </div>
+</section>
+
+<!-- 16 SIBLING -->
+<section class="slide">
+  <div class="inner">
+    <div class="kicker">Family</div>
+    <h2>Reverie &amp; Prism — Siblings</h2>
+    <table>
+      <tr><th>Aspect</th><th>Prism (stills)</th><th>Reverie (motion)</th></tr>
+      <tr><td>Output</td><td>PNG</td><td>MP4</td></tr>
+      <tr><td>Flow</td><td>synchronous</td><td>async submit→poll→download</td></tr>
+      <tr><td>Engine</td><td>OpenAI gpt-image-2</td><td>BytePlus Seedance 2.0</td></tr>
+      <tr><td>Key</td><td><code>OPENAI_API_KEY</code></td><td><code>ARK_API_KEY</code></td></tr>
+      <tr><td>Cost gate</td><td>soft</td><td><b style="color:var(--crimson)">mandatory</b></td></tr>
+    </table>
+    <p class="sub"><b>Shared canon</b> (one face across stills &amp; motion):
+      <code>profile/alice/visual-canon.md</code> · <code>profile/kiyo/visual-canon.md</code> · <code>kiyo/room-canon.md</code> · <code>kiyo/honda-wave-alpha-canon.md</code></p>
+  </div>
+</section>
+
+<!-- 17 RULES -->
+<section class="slide">
+  <div class="inner">
+    <div class="kicker">Guardrails</div>
+    <h2>Mandatory Rules</h2>
+    <div class="rulegrid">
+      <div><b>Cost gate</b>non-negotiable — estimate → confirm → fire</div>
+      <div><b>Key never echoed</b>ARK_API_KEY redacted from logs/errors</div>
+      <div><b>Canon is source</b>reuse Prism's canon; never hardcode</div>
+      <div><b>ASCII-clean prompts</b>no em-dashes / smart quotes (PS 5.1)</div>
+      <div><b>Helper is canonical</b>no inline HTTP — the .ps1 owns it</div>
+      <div><b>Cost transparency</b>every render reports its USD</div>
+      <div><b>Output routing</b>memories/ · media-gen/video/ · override</div>
+      <div><b>Seal via enchantment</b>never manual git</div>
+      <div><b>Filename sanitize</b>+ timestamp + .mp4</div>
+      <div><b>Top-level params</b>unbranded by default (Lv.2)</div>
+      <div><b>Quota-aware cost</b>token-based, calibrated (Lv.3)</div>
+      <div><b>Never auto-PAYG</b>wait for explicit opt-in (Lv.3)</div>
+      <div><b>Canon integrity</b>Alice block verbatim + anime-forward (Lv.4)</div>
+      <div><b>Image-ref lock</b>Kiyo chooses · anime-only · 4MB (Lv.5)</div>
+      <div><b>Reference = URL/base64</b>API takes no raw local paths</div>
+    </div>
+  </div>
+</section>
+
+<div id="zoom" aria-hidden="true">
+  <button id="zoomclose" type="button" aria-label="Close zoom">✕</button>
+  <pre id="zoompre"></pre>
+  <div id="zoomhint">pinch to zoom · tap ✕ or outside to close</div>
+</div>
+
+<script>
+  // Minimal self-contained slide navigation.
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const cur = document.getElementById('cur');
+  const tot = document.getElementById('tot');
+  const bar = document.getElementById('progress');
+  const mprev = document.getElementById('mprev');
+  const mnext = document.getElementById('mnext');
+  const mpage = document.getElementById('mpage');
+  const zoom = document.getElementById('zoom');
+  const zoompre = document.getElementById('zoompre');
+  const zoomclose = document.getElementById('zoomclose');
+  let i = 0;
+  tot.textContent = slides.length;
+
+  function show(n){
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, k) => s.classList.toggle('active', k === i));
+    cur.textContent = i + 1;
+    bar.style.width = ((i) / (slides.length - 1) * 100) + '%';
+    // mobile pager
+    mpage.textContent = (i + 1) + ' / ' + slides.length;
+    mprev.disabled = (i === 0);
+    mnext.disabled = (i === slides.length - 1);
+    // reset scroll position of the freshly shown slide
+    slides[i].scrollTop = 0;
+  }
+  function next(){ show(i + 1); }
+  function prev(){ show(i - 1); }
+
+  document.addEventListener('keydown', (e) => {
+    if (zoom.classList.contains('open')) { if (e.key === 'Escape') closeZoom(); return; }
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); next(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
+    else if (e.key === 'Home') { e.preventDefault(); show(0); }
+    else if (e.key === 'End') { e.preventDefault(); show(slides.length - 1); }
+  });
+
+  // Mobile prev/next buttons.
+  mprev.addEventListener('click', (e) => { e.stopPropagation(); prev(); });
+  mnext.addEventListener('click', (e) => { e.stopPropagation(); next(); });
+
+  // Tap-to-zoom for ASCII diagrams (fullscreen, scrollable, pinch-zoomable).
+  function openZoom(pre){ zoompre.innerHTML = pre.innerHTML; zoom.classList.add('open'); zoom.scrollTop = 0; zoom.scrollLeft = 0; }
+  function closeZoom(){ zoom.classList.remove('open'); }
+  zoomclose.addEventListener('click', (e) => { e.stopPropagation(); closeZoom(); });
+  zoom.addEventListener('click', (e) => { e.stopPropagation(); if (e.target === zoom) closeZoom(); });
+
+  // Click left/right halves to navigate — ignore the mobile nav bar and the
+  // zoom overlay; tapping an ASCII panel opens the zoom view instead.
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('#zoom') || e.target.closest('#mobilenav')) return;
+    const asc = e.target.closest('pre.ascii');
+    if (asc) { openZoom(asc); return; }
+    if (e.clientX < window.innerWidth * 0.4) prev(); else next();
+  });
+
+  show(0);
+</script>
+</body>
+</html>
